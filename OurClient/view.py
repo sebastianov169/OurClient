@@ -267,6 +267,7 @@ class View:
         # zOrder: pequenos detras, grandes delante (sortByZOrder)
         items.sort(key=lambda t: _f(t[1].masa, 0))
         own_drawn = None  # (sx, sy, r_px, color, name) -> dibujado al FINAL
+        own_drawn_ent = None  # misma tupla pero de la entidad del CLEAR
         # identificacion de la propia: SOLO el id REAL (owner==account_id)
         # o el player_entity_id (marca 0x19/0x1a del CLEAR). NO usar
         # player_cells suelto: el 0x1c que llega en frames esporadicos
@@ -320,11 +321,13 @@ class View:
                     _idx = abs(hash(eid)) % len(CELL_RGB) if CELL_RGB else 0
                 color = CELL_RGB[_idx] if CELL_RGB else (100, 100, 200)
             if is_own:
-                # la celula propia se dibuja AL FINAL (encima de la comida
-                # que la tapaba: con masa 1.0 quedaba enterrada en el grupo
-                # de miles de pepitas del zOrder por masa)
+                # la celula del jugador se dibuja AL FINAL (encima de la
+                # comida que la tapaba). Capturamos sus datos aqui pero
+                # NO la dibujamos en este bucle: el overlay final usa
+                # own_x/own_z/own_mass_ema (autoritativos) para que no
+                # salte entre frames aunque la entidad del mundo fluctue.
                 name = w.names.get(eid) or w.player_info.get(eid, {}).get("name")
-                own_drawn = (sx, sy, r_px, color, name)
+                own_drawn_ent = (sx, sy, r_px, color, name)
                 continue
             if r_px > 6:
                 pygame.draw.circle(surf, color, (int(sx), int(sy)), int(r_px))
@@ -345,24 +348,50 @@ class View:
                     ny = int(sy - r_px - 12)
                     surf.blit(shadow, (nx + 1, ny + 1))
                     surf.blit(lbl, (nx, ny))
-        # --- celula del jugador: encima de TODO, con borde y nombre ---
-        # SIEMPRE se dibuja (con la posicion/masa REALES own_x/own_z/
-        # own_mass): aunque player_entity_id fluctue (el 0x1c es esporadico
-        # en FFA), el jugador NUNCA pierde su celula de vista
-        if own_drawn is None and w.own_x is not None and w.own_z is not None:
+        # --- celula del jugador (overlay FINAL autoritativo) ---
+        # SIEMPRE usa own_x/own_z (cache REAL, no la entidad que fluctua).
+        # Si own_mass_ema > 1.0, ese es el real; si no, fallback al del
+        # CLEAR de la entidad real (own_drawn_ent) o al spawn. NUNCA
+        # MASA 10 fantasma.
+        m_real = 0.0
+        if w.own_mass > 1.0:
+            m_real = w.own_mass
+        elif w.mass > 0:
+            m_real = w.mass
+        if m_real <= 0 and own_drawn_ent is not None:
+            # ultimo recurso: lo que teniamos del bucle
+            pass
+        own_drawn = None
+        if w.own_x is not None and w.own_z is not None and m_real > 0:
             sx, sy = self.world_to_screen(w.own_x, w.own_z)
             if -200 <= sx <= self.w + 200 and -200 <= sy <= self.h + 200:
-                m_real = w.own_mass if w.own_mass and w.own_mass > 1.0 else 10.0
                 r_w = radio_from_masa(m_real)
-                r_px = max(28.0, r_w * self.zoom)
-                color = (80, 195, 255)
+                r_px = max(32.0, r_w * self.zoom)
+                # color del binario: TEAM_RGB[1] (azul) o el color REAL
+                # del jugador del op16
                 nid = w.own_id_real
+                color = (80, 195, 255)
+                if nid is not None:
+                    own_info = w.player_info.get(nid, {})
+                    c = own_info.get("color")
+                    if isinstance(c, (int, float)) and not isinstance(c, bool):
+                        color = ((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF)
+                    else:
+                        color = TEAM_RGB[1] if len(TEAM_RGB) > 1 else (80, 160, 255)
+                elif own_drawn_ent is not None:
+                    color = own_drawn_ent[3]
+                # nombre: del id real si esta
                 name = None
                 if nid is not None:
                     name = (w.names.get(nid)
                             or w.player_info.get(nid, {}).get("name")
                             or w.leaderboard.get(nid, {}).get("name"))
+                if not name and own_drawn_ent is not None:
+                    name = own_drawn_ent[4]
                 own_drawn = (sx, sy, r_px, color, name)
+        if own_drawn is None and own_drawn_ent is not None:
+            # sin own_x/own_z: fallback temporal al CLEAR (mejor que nada)
+            own_drawn = own_drawn_ent
         if own_drawn is not None:
             sx, sy, r_px, color, name = own_drawn
             pygame.draw.circle(surf, color, (int(sx), int(sy)), int(r_px))

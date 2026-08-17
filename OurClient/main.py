@@ -92,6 +92,89 @@ _last_udp_move = [0.0]  # ultimo MOVE TCP claro (~17ms = 60Hz)
 _last_udp_only = [0.0]   # ultimo MOVE UDP refuerzo (~100ms)
 
 
+def _check_death(_prev_spawned, net, now, STATE, net_args):
+    """Triple check de muerte. Devuelve True si murio y se debe ir al lobby.
+
+    Fuentes de deteccion:
+      A) Transicion spawned True->False (la principal, viene de [25] AMF3).
+      B) Timeout 6s sin CLEAR del propio (muerte silenciosa del server).
+
+    Tambien dispara el AUTO-RESPAWN si STATE.autorespawn == True.
+    """
+    spawned_now = bool(net.world.spawned)
+    # (A) transicion
+    if _prev_spawned and not spawned_now:
+        # (no hacer nada si ya estamos en lobby/muerto — evita spam)
+        if net.world.spawn_pos is not None and net.world.connected:
+            print("[MUERTE] -> lobby (REAPARECER para spawnear)", flush=True)
+            _schedule_autorespawn(net, net_args, STATE, 0.5)
+            return True
+    # (B) timeout sin CLEAR del propio
+    if (net.world.spawned and net.world._t_last_own_seen > 0
+            and (now - net.world._t_last_own_seen) > 6.0):
+        print("[MUERTE-TIMEOUT] %.1fs sin CLEAR del propio -> lobby" %
+              (now - net.world._t_last_own_seen), flush=True)
+        net.world.spawned = False
+        net.world.player_entity_id = None
+        _schedule_autorespawn(net, net_args, STATE, 0.5)
+        return True
+    return False
+
+
+def _schedule_autorespawn(net, net_args, STATE, delay=0.5):
+    """Dispara spawn_event en `delay` segundos si no se ha respawneado antes.
+
+    Solo si STATE.autorespawn == True. Thread daemon.
+    """
+    if not STATE.autorespawn:
+        return
+    import threading as _th
+
+    def _go():
+        t0 = time.time()
+        while time.time() - t0 < delay + 1.0:
+            time.sleep(0.1)
+            if not net.world.connected:
+                return
+            if net.world.spawned:
+                return
+        try:
+            net_args.spawn_event.set()
+            print("[AUTO-RESPAWN] spawn_event disparado", flush=True)
+        except Exception:
+            pass
+
+    _th.Thread(target=_go, daemon=True).start()
+
+
+def _tick_movement(dt, view, net):
+    """Un tick del control de movimiento: integra local + envia MOVE.
+
+    1) update_mouse con la posicion actual del cursor.
+    2) integra localmente (own_x/own_z hacia donde apunta el mouse).
+    3) envia MOVE TCP claro 10022 cada ~100ms (10Hz, suficiente para
+       correlacion sin saturar el socket).
+    4) envia MOVE UDP refuerzo cada ~100ms.
+    """
+    import pygame as _pg
+    mx, my = _pg.mouse.get_pos()
+    view.update_mouse(mx, my)
+    lm = view.last_move
+    if lm["t"] <= 0:
+        return
+    # 1) integracion local (cada frame)
+    view.world.integrate_move(dt, lm["angle"], lm["power"])
+    now2 = time.time()
+    # 2) MOVE TCP claro 10022 a 10Hz
+    if now2 - _last_udp_move[0] >= 0.10:
+        _last_udp_move[0] = now2
+        net.move_tcp(lm["angle"], lm["power"])
+    # 3) UDP 3724 refuerzo a 10Hz
+    if now2 - _last_udp_only[0] >= 0.10:
+        _last_udp_only[0] = now2
+        _send_move(lm["angle"], lm["power"], net, view)
+
+
 def main():
     try:
         _main_inner()
@@ -208,59 +291,15 @@ def _main_inner():
             in_lobby = False
             muerto = False
             print("[AUTO] spawn detectado -> entrando al juego", flush=True)
-        # MUERTE: SOLO en la TRANSICION spawned True->False ([25] llega y
-        # process_amf3 pone spawned=False). NO por estado continuo: mientras
-        # el respawn esta en curso (REAPARECER -> spawn_event -> esperando
-        # el [20]) spawned sigue False y el check continuo re-marcaba muerte
-        # -> bucle lobby infinito (reproducido: spam [MUERTE] + "me manda
-        # otra vez al lobby").
-        if (_prev_spawned and not net.world.spawned
-                and not in_lobby and not muerto):
+        # MUERTE triple-check: [25] AMF3 (process_amf3 pone spawned=False),
+        # transicion de spawned True->False, o timeout sin CLEAR propio.
+        # NO por estado continuo: durante el respawn (REAPARECER ->
+        # spawn_event -> esperando [20]) spawned sigue False y el check
+        # continuo re-marcaba muerte -> bucle lobby infinito.
+        if _check_death(_prev_spawned, net, now, _C, net_args):
             muerto = True
             in_lobby = True
-            print("[MUERTE] -> lobby (REAPARECER para spawnear)", flush=True)
-            # AUTO-RESPAWN RAPIDO: el respawn se dispara en 0.5s (no 1s)
-            # para que la cuenta vuelva al juego sin esperar click. Si
-            # AUTORESPAWN esta OFF, mostrar el lobby y esperar click/ENTER.
-            try:
-                if _C.STATE.autorespawn:
-                    import threading as _th
-                    def _autospawn():
-                        _t_s = time.time()
-                        while time.time() - _t_s < 0.5:
-                            time.sleep(0.1)
-                            if not net.world.connected:
-                                break
-                            if net.world.spawned:
-                                return
-                        net_args.spawn_event.set()
-                        print("[AUTO-RESPAWN] spawn_event disparado (0.5s)", flush=True)
-                    _th.Thread(target=_autospawn, daemon=True).start()
-            except Exception:
-                pass
         _prev_spawned = bool(net.world.spawned)
-        # DETECCION DE MUERTE POR TIMEOUT: si llevamos >6s sin que el CLEAR
-        # del server incluya a nuestra entidad (player_entity_id), asumimos
-        # muerte silenciosa (sin [25] — el server no avisa). Esto evita que
-        # la cuenta se quede "viva" en la GUI sin estarlo.
-        if (not in_lobby and not pausa and not muerto
-                and net.world.spawned and net.world._t_last_own_seen > 0
-                and (now - net.world._t_last_own_seen) > 6.0):
-            # detectar por timeout: forzar muerte
-            muerto = True
-            in_lobby = True
-            print("[MUERTE-TIMEOUT] %.1fs sin CLEAR del propio -> lobby" %
-                  (now - net.world._t_last_own_seen), flush=True)
-            net.world.spawned = False
-            net.world.player_entity_id = None
-            if _C.STATE.autorespawn:
-                import threading as _th
-                def _autospawn_t():
-                    time.sleep(0.5)
-                    net_args.spawn_event.set()
-                    print("[AUTO-RESPAWN] timeout -> spawn_event disparado",
-                          flush=True)
-                _th.Thread(target=_autospawn_t, daemon=True).start()
         # INTEGRACION LOCAL del MOVE (vis): el visor integra el MOVE en el hilo
         # UI para que la camara y la celula visible se muevan hacia donde
         # apunta el mouse en tiempo real. Si el server confirma la posicion
@@ -273,27 +312,7 @@ def _main_inner():
         # envia ~5.5 MOVEs/s (820 en 150s) — uso 100ms = 10Hz que es
         # suficiente para que el server correlacione la cuenta y no sature.
         if not in_lobby and not pausa and not muerto:
-            mx, my = pygame.mouse.get_pos()
-            view.update_mouse(mx, my)
-            lm = view.last_move
-            now2 = time.time()
-            if lm["t"] > 0:
-                # 1) integrar LOCALMENTE CADA FRAME (dt = tiempo real desde
-                # el ultimo frame). Esto mueve own_x/own_z hacia donde
-                # apunta el mouse. La camara STUCK (update_camera) usa
-                # own_x/own_z prioritariamente -> la celula visible va al
-                # nuevo punto. Velocidad acotada para no escapar del mapa.
-                view.world.integrate_move(dt, lm["angle"], lm["power"])
-                # 2) MOVE TCP claro 10022: el canal real del movimiento.
-                # 100ms = 10Hz (igual al binario: ~5.5/s, suficiente).
-                if now2 - _last_udp_move[0] >= 0.10:
-                    _last_udp_move[0] = now2
-                    net.move_tcp(lm["angle"], lm["power"])
-                # 3) UDP 3724 REFUERZO: ya no es necesario si el TCP
-                # funciona; solo en caso de error. Misma cadencia.
-                if now2 - _last_udp_only[0] >= 0.10:
-                    _last_udp_only[0] = now2
-                    _send_move(lm["angle"], lm["power"], net, view)
+            _tick_movement(dt, view, net)
 
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:

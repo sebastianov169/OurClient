@@ -77,18 +77,19 @@ def draw_xp_bar(surf, x, y, w, h, level, xp, xp_next, font):
 
 def draw_minimap(surf, view, x, y, size):
     """Mini-mapa del binario: el mundo 16384u -> size px. La propia =
-    circulo blanco, los gigantes del mundo = puntos."""
+    circulo blanco con halo cyan, los gigantes del mundo = puntos.
+    Borde visible y etiqueta "MAPA" arriba a la izquierda."""
     w = view.world
     s = pygame.Surface((size, size), pygame.SRCALPHA)
-    s.fill((10, 12, 18, 220))
-    pygame.draw.rect(s, (40, 46, 60), s.get_rect(), 1, border_radius=3)
+    s.fill((10, 12, 18, 230))
+    pygame.draw.rect(s, (90, 100, 120, 220), s.get_rect(), 1, border_radius=3)
     sx, sz = w.own_x, w.own_z
     if sx is None:
         sx, sz = (w.spawn_pos or (8192, 8192))
     cx = float(_safe(sx, 8192.0))
     cz = float(_safe(sz, 8192.0))
     scale = size / 16384.0
-    # los gigantes del mundo (>500 de masa): puntos grandes y brillantes
+    # gigantes del mundo (masa > 500): puntos brillantes
     with w.lock:
         items = list(w.entities.items())
     for eid, e in items:
@@ -105,14 +106,14 @@ def draw_minimap(surf, view, x, y, size):
             r = max(1, int(min(4, m / 2000.0)))
             color = (255, 200, 60)  # gigante = dorado
             pygame.draw.circle(s, color, (px, py), r)
-    # la propia SIEMPRE visible: blanco brillante
+    # la propia SIEMPRE visible: blanco con halo cyan
     px = int(cx * scale)
     py = int(cz * scale)
     if 0 <= px < size and 0 <= py < size:
-        pygame.draw.circle(s, (255, 255, 255), (px, py), 4)
         pygame.draw.circle(s, (0, 200, 255), (px, py), 6, 1)
+        pygame.draw.circle(s, (255, 255, 255), (px, py), 4)
     surf.blit(s, (x, y))
-    lbl = rc(_get_font_tiny(), "MAPA", True, DIM)
+    lbl = rc(_get_font_tiny(), "MAPA", True, (140, 150, 165))
     surf.blit(lbl, (x + 6, y + 4))
 
 
@@ -265,7 +266,7 @@ def draw_hud(surf, font, font_small, snap, view, font_tiny=None,
     # empieza en W - 230 (= 160px del borde derecho). NO se solapan.
     draw_stats_bar(surf, W - 290, 8, 220, 22, font_tiny, fps, ping_ms, server, pings)
     # --- minimapa esquina superior izquierda ---
-    draw_minimap(surf, view, 14, 38, 110)
+    draw_minimap(surf, view, 14, 38, 130)
     # --- leaderboard lateral (Leaderboard + LeaderboardSlot) ---
     lb = w.leaderboard
     # masa real por entidad
@@ -276,16 +277,19 @@ def draw_hud(surf, font, font_small, snap, view, font_tiny=None,
     rows.sort(key=lambda r: -r[2])
     # el leaderboard empieza mas abajo para no chocar con la stats bar
     px = W - 230
-    LB_TOP = 44  # debajo de la stats bar (8+26+10)
-    ph = min(400, 34 + len(rows) * 22)
+    LB_TOP = 44  # debajo de la stats bar (8+22+14)
+    # hasta 16 filas (incluida cabecera) — el panel es alto
+    max_rows = 16
+    n_show = min(max_rows, len(rows))
+    ph = min(440, 36 + n_show * 22)
     panel = pygame.Surface((220, ph), pygame.SRCALPHA)
-    panel.fill((10, 12, 18, 200))
+    panel.fill((10, 12, 18, 220))
     surf.blit(panel, (px, LB_TOP))
     pygame.draw.rect(surf, (40, 46, 60), (px, LB_TOP, 220, ph), 1)
     ttl = rc(font_small, "CLASIFICACION", True, ACCENT)
     surf.blit(ttl, (px + 10, LB_TOP + 6))
     my_id = w.player_entity_id
-    for i, (eid, name, masa) in enumerate(rows[:14]):
+    for i, (eid, name, masa) in enumerate(rows[:n_show]):
         col = GOLD if eid == my_id else TEXT
         row = rc(font_small, "%2d  %s" % (i + 1, (name or "jugador %d" % eid)), True, col)
         surf.blit(row, (px + 10, LB_TOP + 30 + i * 22))

@@ -113,6 +113,28 @@ class World(_Grid):
             self.player_cells.clear()
 
     # ---- entidad local del jugador (cuando el server no correlaciona) ----
+    def set_own_pos(self, x, z, source="unknown"):
+        """Setea la posicion REAL del jugador con trazabilidad.
+
+        source indica de dónde el se obtuvo:
+          - 'spawn': op20 (SPAWNED [20])
+          - 'feed': CLEAR/0x04 con eid == player_entity_id o owner == account_id
+          - 'op20': op0x2e (POSICION del jugador, escala u16/4)
+          - 'local_move': integracion local del MOVE
+          - 'p0': pos inicial (None)
+        Solo actualiza si los valores son validos.
+        """
+        try:
+            nx, nz = float(x), float(z)
+        except (TypeError, ValueError):
+            return
+        if not (0 <= nx <= MUNDO_W and 0 <= nz <= MUNDO_H):
+            # snap al borde si se sale (no teletransportar al spawn)
+            nx = max(0.0, min(MUNDO_W, nx))
+            nz = max(0.0, min(MUNDO_H, nz))
+        self.own_x, self.own_z = nx, nz
+        self._t_last_own_seen = time.time()
+
     def update_own_mass(self, masa):
         """Actualiza own_mass con SUAVIZADO. La masa del CLEAR del server
         fluctua con culling: a veces llega 80, luego 50, luego 100. El
