@@ -1,0 +1,94 @@
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined8 FUN_1409548a0(undefined8 param_1,undefined8 param_2)
+
+{
+  if (*(int *)(*(longlong *)ThreadLocalStoragePointer + 4) < DAT_14223a71c) {
+    _Init_thread_header(&DAT_14223a71c);
+    if (DAT_14223a71c == -1) {
+      _DAT_14221a7a0 = 0xe0114642;
+      _DAT_14221a7a4 = 0x24558a62;
+      _DAT_14221a7a8 = 0x6899cea6;
+      _DAT_14221a7ac = 0xacddf2ea;
+      _DAT_14221a7b0 = 0xd001362e;
+      _DAT_14221a7b4 = 0x14457a52;
+      DAT_14221a7b8 = 0x96;
+      DAT_14221a7b9 = FUN_140231450(0x7c,0x44d,0x19,2);
+      DAT_14221a7ba = FUN_140231450(0x7c,0x44d,0x1a,2);
+      DAT_14221a7bb = FUN_140231450(0x7c,0x44d,0x1b,2);
+      DAT_14221a7bc = FUN_140231450(0x7c,0x44d,0x1c,2);
+      DAT_14221a7bd = FUN_140231450(0x7c,0x44d,0x1d,2);
+      DAT_14221a7be = FUN_140231450(0x7c,0x44d,0x1e,2);
+      DAT_14221a7bf = FUN_140231450(0x7c,0x44d,0x1f,2);
+      DAT_14221a7c0 = FUN_140231450(0x7c,0x44d,0x20,2);
+      DAT_14221a7c1 = FUN_140231450(0x7c,0x44d,0x21,2);
+      DAT_14221a7c2 = FUN_140231450(0x7c,0x44d,0x22,2);
+      DAT_14221a7c3 = FUN_140231450(0x7c,0x44d,0x23,2);
+      DAT_14221a7c4 = FUN_140231450(0x7c,0x44d,0x24,2);
+      DAT_14221a7c5 = FUN_140231450(0x7c,0x44d,0x25,2);
+      DAT_14221a7c6 = FUN_140231450(0x7c,0x44d,0x26,2);
+      DAT_14221a7c7 = FUN_140231450(0x7c,0x44d,0x27,2);
+      DAT_14221a7c8 = FUN_140231450(0x7c,0x44d,0x28,2);
+      DAT_14221a7c9 = FUN_140231450(0x7c,0x44d,0x29,2);
+      DAT_14221a7ca = FUN_140231450(0x7c,0x44d,0x2a,2);
+      DAT_14221a7cb = FUN_140231450(0x7c,0x44d,0x2b,2);
+      DAT_14221a7cc = FUN_140231450(0x7c,0x44d,0x2c,2);
+      DAT_14221a7cd = FUN_140231450(0x7c,0x44d,0x2d,2);
+      DAT_14221a7ce = FUN_140231450(0x7c,0x44d,0x2e,2);
+      DAT_14221a7cf = FUN_140231450(0x7c,0x44d,0x2f,2);
+      DAT_14221a7d0 = FUN_140231450(0x7c,0x44d,0x30,2);
+      DAT_14221a7d1 = FUN_140231450(0x7c,0x44d,0x31,2);
+      DAT_14221a7d2 = FUN_140231450(0x7c,0x44d,0x32,2);
+      DAT_14221a7d3 = FUN_140231450(0x7c,0x44d,0x33,2);
+      DAT_14221a7d4 = FUN_140231450(0x7c,0x44d,0x34,2);
+      DAT_14221a7d5 = FUN_140231450(0x7c,0x44d,0x35,2);
+      DAT_14221a7d6 = FUN_140231450(0x7c,0x44d,0x36,2);
+      DAT_14221a7d7 = FUN_140231450(0x7c,0x44d,0x37,2);
+      DAT_14221a7d8 = FUN_140231450(0x7c,0x44d,0x38,2);
+      DAT_14221a7d9 = FUN_140231450(0x7c,0x44d,0x39,2);
+      DAT_14221a7da = FUN_140231450(0x7c,0x44d,0x3a,2);
+      DAT_14221a7db = FUN_140231450(0x7c,0x44d,0x3b,2);
+      DAT_14221a7dc = FUN_140231450(0x7c,0x44d,0x3c,2);
+      DAT_14221a7dd = FUN_140231450(0x7c,0x44d,0x3d,2);
+      DAT_14221a7de = FUN_140231450(0x7c,0x44d,0x3e,2);
+      DAT_14221a7df = FUN_140231450(0x7c,0x44d,0x3f,2);
+      DAT_14221a7e0 = FUN_140231450(0x7c,0x44d,0x40,2);
+      DAT_14221a7e1 = FUN_140231450(0x7c,0x44d,0x41,2);
+      DAT_14221a7e2 = FUN_140231450(0x7c,0x44d,0x42,2);
+      DAT_14221a7e3 = FUN_140231450(0x7c,0x44d,0x43,2);
+      DAT_14221a7e4 = FUN_140231450(0x7c,0x44d,0x44,2);
+      DAT_14221a7e5 = FUN_140231450(0x7c,0x44d,0x45,2);
+      DAT_14221a7e6 = FUN_140231450(0x7c,0x44d,0x46,2);
+      DAT_14221a7e7 = FUN_140231450(0x7c,0x44d,0x47,2);
+      DAT_14221a7e8 = FUN_140231450(0x7c,0x44d,0x48,2);
+      DAT_14221a7e9 = FUN_140231450(0x7c,0x44d,0x49,2);
+      DAT_14221a7ea = FUN_140231450(0x7c,0x44d,0x4a,2);
+      DAT_14221a7eb = FUN_140231450(0x7c,0x44d,0x4b,2);
+      DAT_14221a7ec = FUN_140231450(0x7c,0x44d,0x4c,2);
+      DAT_14221a7ed = FUN_140231450(0x7c,0x44d,0x4d,2);
+      DAT_14221a7ee = FUN_140231450(0x7c,0x44d,0x4e,2);
+      DAT_14221a7ef = FUN_140231450(0x7c,0x44d,0x4f,2);
+      DAT_14221a7f0 = FUN_140231450(0x7c,0x44d,0x50,2);
+      DAT_14221a7f1 = FUN_140231450(0x7c,0x44d,0x51,2);
+      DAT_14221a7f2 = FUN_140231450(0x7c,0x44d,0x52,2);
+      DAT_14221a7f3 = FUN_140231450(0x7c,0x44d,0x53,2);
+      DAT_14221a7f4 = FUN_140231450(0x7c,0x44d,0x54,2);
+      DAT_14221a7f5 = FUN_140231450(0x7c,0x44d,0x55,2);
+      DAT_14221a7f6 = FUN_140231450(0x7c,0x44d,0x56,2);
+      DAT_14221a7f7 = FUN_140231450(0x7c,0x44d,0x57,2);
+      DAT_14221a7f8 = FUN_140231450(0x7c,0x44d,0x58,2);
+      DAT_14221a7f9 = FUN_140231450(0x7c,0x44d,0x59,2);
+      DAT_14221a7fa = FUN_140231450(0x7c,0x44d,0x5a,2);
+      DAT_14221a7fb = FUN_140231450(0x7c,0x44d,0x5b,2);
+      DAT_14221a7fc = FUN_140231450(0x7c,0x44d,0x5c,2);
+      DAT_14221a7fd = FUN_140231450(0x7c,0x44d,0x5d,2);
+      DAT_14221a7fe = FUN_140231450(0x7c,0x44d,0x5e,2);
+      DAT_14221a7ff = FUN_140231450(0x7c,0x44d,0x5f,2);
+      _Init_thread_footer(&DAT_14223a71c);
+    }
+  }
+  FUN_1402312a0(param_2,&DAT_142131cf8,&DAT_14221a7a0,0x7c,0x44d,2);
+  return param_2;
+}
+

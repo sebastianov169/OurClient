@@ -1,0 +1,40 @@
+# credenciales y material sensible
+*.pem
+*.key
+qw.sol
+working_device.txt
+*device*
+*token*
+*secret*
+
+# binarios
+*.exe
+*.dll
+*.obj
+*.o
+*.lib
+
+# capturas y logs del RE
+*.jsonl
+*.pcap
+*.log
+*.raw
+*.bmp
+captures/
+frida_*
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# editor
+.vscode/
+.idea/
+.opencode/
+node_modules/
+
+# capturas de pantalla locales
+*.png
+!README.md
